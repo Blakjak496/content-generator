@@ -1,0 +1,5 @@
+.env
+prompt.txt
+node_modules/
+run.log
+config.json
