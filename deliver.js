@@ -1,14 +1,19 @@
 import "dotenv/config";
+import { readFileSync } from "fs";
 import { Resend } from "resend";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const config = JSON.parse(readFileSync("config.json", "utf8"));
+const storyRegex = new RegExp(`^${config.newFileMarker} \\d`);
+const headingRegex = new RegExp(`^(${config.sectionHeadings.join("|")})$`);
+
 function splitIntoStories(content) {
   const stories = [];
-  const parts = content.split(/(?=STORY \d)/);
+  const parts = content.split(new RegExp(`(?=${config.newFileMarker} \\d)`));
   for (const part of parts) {
-    if (part.trim().startsWith("STORY")) {
+    if (part.trim().startsWith(config.newFileMarker)) {
       stories.push(part.trim());
     }
   }
@@ -19,13 +24,13 @@ function buildDocument(storyContent) {
   const lines = storyContent.split("\n");
 
   const children = lines.map(line => {
-    if (line.match(/^STORY \d/)) {
+    if (storyRegex.test(line)) {
       return new Paragraph({
         heading: HeadingLevel.HEADING_1,
         children: [new TextRun(line)]
       });
     }
-    if (line.match(/^(Headline|Subdeck|Article|Newsletter Summary|LinkedIn Post)$/)) {
+    if (headingRegex.test(line.trim())) {
       return new Paragraph({
         heading: HeadingLevel.HEADING_2,
         children: [new TextRun(line)]
@@ -53,7 +58,7 @@ export async function deliver(content, runDate) {
       const doc = buildDocument(story);
       const buffer = await Packer.toBuffer(doc);
       return {
-        filename: `SJ-Content-${date}-Story${i + 1}.docx`,
+        filename: `${date}-Story${i + 1}.docx`,
         content: buffer.toString("base64")
       };
     })
@@ -63,7 +68,7 @@ export async function deliver(content, runDate) {
     from: process.env.EMAIL_SENDER,
     to: process.env.EMAIL_RECIPIENT,
     subject: `${process.env.EMAIL_SUBJECT} - ${date}`,
-    text: `Stone Junction content package for ${date}. ${attachments.length} stories attached.`,
+    text: `Content package for ${date}. ${attachments.length} files attached.`,
     attachments
   });
 }

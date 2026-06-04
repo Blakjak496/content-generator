@@ -35,6 +35,7 @@ const content = response.content
 await deliver(content, runDate);
 
 writeFileSync('config.json', JSON.stringify({
+    ...config,
     articleCounter: config.articleCounter + 3,
     lastRun: runDate
 }, null, 2));
