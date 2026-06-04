@@ -8,14 +8,14 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY});
 const SYSTEM_PROMPT = readFileSync("prompt.txt", "utf8");
 
 const config = JSON.parse(readFileSync("config.json", 'utf8'));
-const startingCode = config.articleCounter;
+const startingCode = config.contentCounter;
 const runDate = new Date().toISOString();
 
 const userPrompt = `
 Today's date is ${runDate}.
   The last run was ${config.lastRun ?? "unknown — this may be the first run"}.
   Search for stories published since the last run.
-  The article codes for this run are STO${startingCode}, STO${startingCode + 1}, STO${startingCode + 2}.
+  The content codes for this run are STO${startingCode}, STO${startingCode + 1}, STO${startingCode + 2}.
 `
 
 try {
@@ -36,7 +36,7 @@ await deliver(content, runDate);
 
 writeFileSync('config.json', JSON.stringify({
     ...config,
-    articleCounter: config.articleCounter + 3,
+    contentCounter: config.contentCounter + 3,
     lastRun: runDate
 }, null, 2));
 

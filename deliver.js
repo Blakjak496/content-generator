@@ -6,25 +6,25 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const config = JSON.parse(readFileSync("config.json", "utf8"));
-const storyRegex = new RegExp(`^${config.newFileMarker} \\d`);
+const sectionRegex = new RegExp(`^${config.newFileMarker} \\d`);
 const headingRegex = new RegExp(`^(${config.sectionHeadings.join("|")})$`);
 
-function splitIntoStories(content) {
-  const stories = [];
+function splitContent(content) {
+  const section = [];
   const parts = content.split(new RegExp(`(?=${config.newFileMarker} \\d)`));
   for (const part of parts) {
     if (part.trim().startsWith(config.newFileMarker)) {
-      stories.push(part.trim());
+      section.push(part.trim());
     }
   }
-  return stories;
+  return section;
 }
 
-function buildDocument(storyContent) {
-  const lines = storyContent.split("\n");
+function buildDocument(sectionContent) {
+  const lines = sectionContent.split("\n");
 
   const children = lines.map(line => {
-    if (storyRegex.test(line)) {
+    if (sectionRegex.test(line)) {
       return new Paragraph({
         heading: HeadingLevel.HEADING_1,
         children: [new TextRun(line)]
@@ -51,14 +51,14 @@ function buildDocument(storyContent) {
 
 export async function deliver(content, runDate) {
   const date = new Date(runDate).toISOString().split("T")[0];
-  const stories = splitIntoStories(content);
+  const section = splitContent(content);
 
   const attachments = await Promise.all(
-    stories.map(async (story, i) => {
-      const doc = buildDocument(story);
+    section.map(async (sectionContent, i) => {
+      const doc = buildDocument(sectionContent);
       const buffer = await Packer.toBuffer(doc);
       return {
-        filename: `${date}-Story${i + 1}.docx`,
+        filename: `${date}-Content${i + 1}.docx`,
         content: buffer.toString("base64")
       };
     })
